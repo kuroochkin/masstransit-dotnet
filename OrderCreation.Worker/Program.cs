@@ -3,10 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Contracts.Mappings;
 using Microsoft.Extensions.Hosting;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Orders.Data;
+using Orders.Domain;
+using Orders.Service;
+using OrdersApi.Services;
 
-namespace AdminNotification.Worker
+namespace OrderCreation.Worker
 {
     public class Program
     {
@@ -19,6 +27,16 @@ namespace AdminNotification.Worker
             Host.CreateDefaultBuilder(args)
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddDbContext<OrderContext>(options =>
+                    {
+                        options.UseSqlServer(hostContext.Configuration.GetConnectionString("DefaultConnection"));
+                        options.EnableSensitiveDataLogging();
+                    });
+
+                    services.AddScoped<IOrderRepository, OrderRepository>();
+                    services.AddScoped<IOrderService, OrderService>();
+                    services.AddAutoMapper(typeof(OrderProfileMapping));
+                    
                     services.AddMassTransit(x =>
                     {
                         x.SetKebabCaseEndpointNameFormatter();
@@ -28,11 +46,6 @@ namespace AdminNotification.Worker
 
                         x.UsingRabbitMq((context, cfg) =>
                         {
-                            cfg.ReceiveEndpoint("order-created", e =>
-                            {
-                                e.ConfigureConsumer<OrderCreatedNotification>(context);
-                            });
-                            
                             cfg.ConfigureEndpoints(context);
                         });
                     });
