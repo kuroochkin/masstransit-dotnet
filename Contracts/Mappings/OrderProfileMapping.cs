@@ -2,8 +2,7 @@
 using Contracts.Models;
 using Orders.Domain.Entities;
 
-
-namespace OrdersApi.Infrastructure.Mappings
+namespace Contracts.Mappings
 {
     public class OrderProfileMapping : Profile
     {

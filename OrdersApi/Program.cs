@@ -1,8 +1,8 @@
+using Contracts.Mappings;
 using Microsoft.EntityFrameworkCore;
 using Orders.Data;
 using Orders.Domain;
 using Orders.Service;
-using OrdersApi.Infrastructure.Mappings;
 using OrdersApi.Service.Clients;
 using OrdersApi.Services;
 
