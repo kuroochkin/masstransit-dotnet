@@ -11,52 +11,33 @@ namespace OrdersApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrdersController : ControllerBase
+    public class OrdersController(
+        IOrderService orderService,
+        IProductStockServiceClient productStockServiceClient,
+        IMapper mapper,
+        IPublishEndpoint publishEndpoint,
+        ISendEndpointProvider sendEndpointProvider) : ControllerBase
     {
-        private readonly IOrderService _orderService;
-        private readonly IProductStockServiceClient productStockServiceClient;
-        private readonly IMapper mapper;
-        IPublishEndpoint publishEndpoint;
-
-        public OrdersController(IOrderService orderService,
-            IProductStockServiceClient productStockServiceClient,
-            IMapper mapper, IPublishEndpoint publishEndpoint)
-        {
-            _orderService = orderService;
-            this.productStockServiceClient = productStockServiceClient;
-            this.mapper = mapper;
-            this.publishEndpoint = publishEndpoint;
-        }
-
-
         // POST: api/Orders
         [HttpPost]
         public async Task<ActionResult<Order>> PostOrder(OrderModel model)
         {
-            //verify stock
-            //var stocks = await productStockServiceClient.GetStock(
-            //    model.OrderItems.Select(p => p.ProductId).ToList());
-
-            var orderToAdd = mapper.Map<Order>(model);
-            var createdOrder = await _orderService.AddOrderAsync(orderToAdd);
-
-            var notifyOrderCreated = publishEndpoint.Publish(new OrderCreated
-            {
-                CreatedAt = createdOrder.OrderDate,
-                Id = createdOrder.Id,
-                OrderId = createdOrder.OrderId,
-                TotalAmount = createdOrder.OrderItems.Sum(i => i.Price * i.Quantity)
-            });
+            var sendEndpoint = await sendEndpointProvider.GetSendEndpoint(new Uri("queue:create-order-command"));
+            await sendEndpoint.Send(model,
+                context =>
+                {
+                    context.Headers.Set("command-header", "OrderCreated");
+                    context.TimeToLive = TimeSpan.FromHours(1);
+                });
             
-            return CreatedAtAction("GetOrder", new { id = createdOrder.Id }, createdOrder);
+            return Accepted();
         }
-
-
+        
         // GET: api/Orders/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            var order = await _orderService.GetOrderAsync(id);
+            var order = await orderService.GetOrderAsync(id);
             if (order == null)
             {
                 return NotFound();
@@ -76,11 +57,11 @@ namespace OrdersApi.Controllers
 
             try
             {
-                await _orderService.UpdateOrderAsync(order);
+                await orderService.UpdateOrderAsync(order);
             }
             catch
             {
-                if (!await _orderService.OrderExistsAsync(id))
+                if (!await orderService.OrderExistsAsync(id))
                 {
                     return NotFound();
                 }
@@ -97,7 +78,7 @@ namespace OrdersApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            var orders = await _orderService.GetOrdersAsync();
+            var orders = await orderService.GetOrdersAsync();
             return Ok(orders);
         }
 
@@ -107,13 +88,13 @@ namespace OrdersApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
-            var order = await _orderService.GetOrderAsync(id);
+            var order = await orderService.GetOrderAsync(id);
             if (order == null)
             {
                 return NotFound();
             }
 
-            await _orderService.DeleteOrderAsync(id);
+            await orderService.DeleteOrderAsync(id);
             return NoContent();
         }
     }

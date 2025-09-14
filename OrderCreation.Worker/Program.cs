@@ -46,6 +46,11 @@ namespace OrderCreation.Worker
 
                         x.UsingRabbitMq((context, cfg) =>
                         {
+                            cfg.ReceiveEndpoint("create-order-command", e =>
+                            {
+                                e.ConfigureConsumer<CreateOrderConsumer>(context);
+                            });
+                            
                             cfg.ConfigureEndpoints(context);
                         });
                     });

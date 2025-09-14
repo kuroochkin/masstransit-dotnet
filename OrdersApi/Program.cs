@@ -40,7 +40,7 @@ namespace OrdersApi
             builder.Services.AddMassTransit(x =>
             {
                 x.SetKebabCaseEndpointNameFormatter();
-                x.AddConsumer<OrderCreatedConsumer, OrderCreatedConsumerDefinition>();
+                // x.AddConsumer<OrderCreatedConsumer, OrderCreatedConsumerDefinition>();
                 
                 x.UsingRabbitMq((context, cfg) =>
                 {
