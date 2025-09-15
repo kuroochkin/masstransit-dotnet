@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Contracts.Commands;
 using Contracts.Events;
 using Contracts.Models;
+using Contracts.Responses;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Orders.Domain.Entities;
@@ -16,6 +18,7 @@ namespace OrdersApi.Controllers
         IProductStockServiceClient productStockServiceClient,
         IMapper mapper,
         IPublishEndpoint publishEndpoint,
+        IRequestClient<VerifyOrder> requestClient,
         ISendEndpointProvider sendEndpointProvider) : ControllerBase
     {
         // POST: api/Orders
@@ -37,13 +40,13 @@ namespace OrdersApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            var order = await orderService.GetOrderAsync(id);
-            if (order == null)
+            var response = await requestClient.GetResponse<OrderResult>(
+                new VerifyOrder
             {
-                return NotFound();
-            }
+                Id = id,
+            });
 
-            return Ok(order);
+            return Ok(response.Message);
         }
 
         // PUT: api/Orders/5

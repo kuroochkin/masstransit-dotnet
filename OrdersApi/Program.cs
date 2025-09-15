@@ -1,5 +1,6 @@
 using System.Reflection;
 using Contracts.Mappings;
+using Contracts.Responses;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Orders.Data;
@@ -40,7 +41,11 @@ namespace OrdersApi
             builder.Services.AddMassTransit(x =>
             {
                 x.SetKebabCaseEndpointNameFormatter();
-                // x.AddConsumer<OrderCreatedConsumer, OrderCreatedConsumerDefinition>();
+                
+                x.AddConsumer<OrderCreatedConsumer, OrderCreatedConsumerDefinition>();
+                x.AddConsumer<VerifyOrderConsumer>();
+                
+                x.AddRequestClient<VerifyOrder>();
                 
                 x.UsingRabbitMq((context, cfg) =>
                 {
